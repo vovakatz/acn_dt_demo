@@ -1,4 +1,4 @@
-import os, requests
+import os, requests, json
 from fastapi import Request, HTTPException, Depends
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
@@ -16,7 +16,13 @@ async def login_with_credentials(credentials: HTTPBasicCredentials):
     )
 
     if response.status_code == 200:
-        return response.text, None
+        try:
+            # Try to parse JSON response
+            json_response = response.json()
+            return json_response, None
+        except json.JSONDecodeError:
+            # Fallback for legacy format (just in case)
+            return {"token": response.text}, None
     else:
         return None, (response.text, response.status_code)
 

@@ -80,11 +80,11 @@ async def login_route(auth_result=Depends(access.login)):
     logger.info("Login request received", extra={'request_id': request_id})
     
     try:
-        token, err = auth_result
+        response, err = auth_result
         
         if not err:
             logger.info("Login successful", extra={'request_id': request_id})
-            return JSONResponse(content=token)
+            return JSONResponse(content=response)
         else:
             logger.warning(f"Login failed: {err}", extra={'request_id': request_id})
             return JSONResponse(content=err[0], status_code=err[1])

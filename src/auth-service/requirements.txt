@@ -16,8 +16,7 @@ lazy-object-proxy==1.8.0
 MarkupSafe==2.1.1
 mccabe==0.7.0
 parso==0.8.3
-platformdirs==2.5.4
-psycopg2-binary==2.9.10
+asyncpg==0.29.0
 pycparser==2.21
 PyJWT==2.6.0
 pylint==2.15.6

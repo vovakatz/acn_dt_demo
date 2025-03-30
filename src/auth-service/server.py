@@ -1,19 +1,8 @@
 import jwt, datetime, os, logging
-from typing import Optional, Dict, Any, Tuple
-from contextlib import contextmanager
+from typing import Optional, Dict, Any, Tuple, List
+import asyncpg
 
-# Try to import psycopg2-binary first, fall back to psycopg2 if not available
-try:
-    import psycopg2
-    from psycopg2.extras import RealDictCursor
-except ImportError:
-    try:
-        import psycopg2.binary as psycopg2
-        from psycopg2.extras import RealDictCursor
-    except ImportError:
-        raise ImportError("Neither psycopg2 nor psycopg2-binary is installed. Please install one of them with: pip install psycopg2-binary")
-
-from fastapi import FastAPI, Depends, HTTPException, Header, status
+from fastapi import FastAPI, Depends, HTTPException, Header, status, Request
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.responses import JSONResponse, PlainTextResponse
 import uvicorn
@@ -33,9 +22,13 @@ logger = get_custom_logger(service_name="auth-service")
 # Set up HTTP Basic Auth
 security = HTTPBasic()
 
-@contextmanager
-def get_db_connection():
-    """Context manager for database connections"""
+# Database pool
+db_pool = None
+
+@app.on_event("startup")
+async def startup_db_client():
+    global db_pool
+    
     host = os.getenv('DATABASE_HOST')
     database = os.getenv('DATABASE_NAME')
     user = os.getenv('DATABASE_USER')
@@ -48,23 +41,30 @@ def get_db_connection():
         'user': user,
         'port': port
     })
-
-    conn = None
+    
     try:
-        conn = psycopg2.connect(host=host,
-                            database=database,
-                            user=user,
-                            password=password,
-                            port=port)
-        logger.info("Database connection established")
-        yield conn
+        # Create a connection pool
+        db_pool = await asyncpg.create_pool(
+            host=host,
+            database=database,
+            user=user,
+            password=password,
+            port=port,
+            min_size=5,
+            max_size=20
+        )
+        logger.info("Database connection pool established")
     except Exception as e:
         logger.error(f"Failed to connect to database: {str(e)}")
         raise
-    finally:
-        if conn is not None:
-            conn.close()
-            logger.debug("Database connection closed")
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    global db_pool
+    
+    if db_pool:
+        await db_pool.close()
+        logger.debug("Database connection pool closed")
 
 def create_jwt(username: str, secret: str, authz: bool) -> str:
     """Create a JWT token"""
@@ -100,9 +100,9 @@ async def login(credentials: HTTPBasicCredentials = Depends(security)):
         )
 
     try:
-        with get_db_connection() as conn:
-            cur = conn.cursor()
-            query = f"SELECT email, password FROM {auth_table_name} WHERE email = %s"
+        # Get a connection from the pool
+        async with db_pool.acquire() as conn:
+            query = f"SELECT email, password FROM {auth_table_name} WHERE email = $1"
             
             logger.debug("Executing database query", extra={
                 'request_id': request_id,
@@ -110,8 +110,8 @@ async def login(credentials: HTTPBasicCredentials = Depends(security)):
                 'username': credentials.username
             })
             
-            res = cur.execute(query, (credentials.username,))
-            user_row = cur.fetchone()
+            # Execute the query
+            user_row = await conn.fetchrow(query, credentials.username)
             
             if user_row is None:
                 logger.warning("User not found", extra={
@@ -124,8 +124,8 @@ async def login(credentials: HTTPBasicCredentials = Depends(security)):
                     headers={"WWW-Authenticate": "Basic realm=\"Login required!\""},
                 )
                 
-            email = user_row[0]
-            password = user_row[1]
+            email = user_row['email']
+            password = user_row['password']
 
             if credentials.username != email or credentials.password != password:
                 logger.warning("Invalid credentials", extra={
@@ -143,7 +143,7 @@ async def login(credentials: HTTPBasicCredentials = Depends(security)):
                     'username': credentials.username
                 })
                 jwt_token = create_jwt(credentials.username, os.environ['JWT_SECRET'], True)
-                return jwt_token
+                return {"token": jwt_token, "message": "Login successful"}
 
     except HTTPException:
         raise  # Re-raise HTTP exceptions
