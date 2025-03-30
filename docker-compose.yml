@@ -1,0 +1,139 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Auth Service
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: acn
+      POSTGRES_PASSWORD: acn12
+      POSTGRES_DB: authdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./Helm_charts/Postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U acn -d authdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MongoDB Database for Converter and Gateway Services
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: acn
+      MONGO_INITDB_ROOT_PASSWORD: acn12
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh mongodb://acn:acn12@localhost:27017/admin --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ for Message Queuing
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"   # AMQP protocol
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Auth Service
+  auth:
+    build:
+      context: ./src/auth-service
+      dockerfile: Dockerfile
+    container_name: auth
+    ports:
+      - "5001:5000"
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_NAME: authdb
+      DATABASE_USER: acn
+      DATABASE_PASSWORD: acn12
+      AUTH_TABLE: auth_user
+      JWT_SECRET: sarcasm
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Gateway Service
+  gateway:
+    build:
+      context: ./src/gateway-service
+      dockerfile: Dockerfile
+    container_name: gateway
+    ports:
+      - "8080:8080"
+    environment:
+      AUTH_SVC_ADDRESS: "auth:5000"
+      MONGODB_VIDEOS_URI: "mongodb://acn:acn12@mongodb:27017/videos?authSource=admin"
+      MONGODB_MP3S_URI: "mongodb://acn:acn12@mongodb:27017/mp3s?authSource=admin"
+    depends_on:
+      - auth
+      - mongodb
+
+  # Converter Service
+  converter:
+    build:
+      context: ./src/converter-service
+      dockerfile: Dockerfile
+    container_name: converter
+    environment:
+      MP3_QUEUE: "mp3"
+      VIDEO_QUEUE: "video"
+      MONGODB_URI: "mongodb://acn:acn12@mongodb:27017/mp3s?authSource=admin"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+
+  # Notification Service
+  notification:
+    build:
+      context: ./src/notification-service
+      dockerfile: Dockerfile
+    container_name: notification
+    environment:
+      MP3_QUEUE: "mp3"
+      FROM_ADDRESS: "admin@acn.com"
+      SMTP_USER: acn
+      SMTP_PASSWORD: acn12
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+        
+  # UI Service
+  ui:
+    build:
+      context: ./src/ui-service
+      dockerfile: Dockerfile
+    container_name: ui
+    ports:
+      - "3000:80"
+    depends_on:
+      - gateway
+      - auth
+
+volumes:
+  postgres_data:
+  mongodb_data:
+  rabbitmq_data:
