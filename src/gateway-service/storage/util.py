@@ -1,24 +1,29 @@
 import pika, json, os, sys
+from fastapi import UploadFile
 
-# Use the local logger import
-from ..log.custom_logger import get_custom_logger
+# Use absolute import for logger
+from log.custom_logger import get_custom_logger
 
 # Initialize logger
 logger = get_custom_logger(service_name="gateway-storage")
 
-def upload(f, fs, channel, access):
+async def upload(f: UploadFile, fs, channel, access):
     username = access.get("username", "unknown")
     request_id = os.urandom(8).hex()  # Generate a unique request ID for this upload
+    
+    file_name = f.filename
     
     logger.info("Starting file upload", extra={
         'request_id': request_id,
         'username': username,
-        'filename': getattr(f, 'filename', 'unknown')
+        'file_name': file_name  # Changed 'filename' to 'file_name' to avoid conflict
     })
     
     try:
         logger.debug("Saving file to GridFS", extra={'request_id': request_id})
-        fid = fs.put(f)
+        # Read the file content
+        content = await f.read()
+        fid = fs.put(content, filename=file_name)
         
         logger.info("File saved to GridFS", extra={
             'request_id': request_id,

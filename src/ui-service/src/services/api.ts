@@ -15,6 +15,7 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
+    // Explicitly add Bearer to the token
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -31,7 +32,7 @@ export const authService = {
         },
       });
       
-      // Store token in localStorage
+      // Store the raw token without Bearer
       localStorage.setItem('token', response.data);
       return response.data;
     } catch (error) {

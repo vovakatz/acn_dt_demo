@@ -116,7 +116,7 @@ services:
       MP3_QUEUE: "mp3"
       FROM_ADDRESS: "admin@acn.com"
       SMTP_USER: acn
-      SMTP_PASSWORD: acn12
+      SMTP_PASSWORD: BT5k6tZX
     depends_on:
       rabbitmq:
         condition: service_healthy
