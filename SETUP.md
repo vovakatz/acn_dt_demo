@@ -93,7 +93,7 @@ sed -i '' 's|image: nasi101/notification|image: notification-service:latest\n   
 
 # Deploy MongoDB
 echo "==== Deploying MongoDB ===="
-cd Helm_charts/MongoDB
+cd helm_charts/MongoDB
 kubectl apply -f templates/storageclass.yaml
 kubectl apply -f templates/configmap.yaml
 kubectl apply -f templates/secret.yaml
@@ -105,14 +105,14 @@ cd ../..
 
 # Deploy PostgreSQL
 echo "==== Deploying PostgreSQL ===="
-cd Helm_charts/Postgres
+cd helm_charts/Postgres
 kubectl apply -f templates/postgres-service.yaml
 kubectl apply -f templates/postgres-deploy.yaml
 cd ../..
 
 # Deploy RabbitMQ
 echo "==== Deploying RabbitMQ ===="
-cd Helm_charts/RabbitMQ
+cd helm_charts/RabbitMQ
 kubectl apply -f templates/storageclasses.yaml
 kubectl apply -f templates/configmap.yaml
 kubectl apply -f templates/secret.yaml

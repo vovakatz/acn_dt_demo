@@ -13,7 +13,7 @@ services:
       POSTGRES_DB: authdb
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./Helm_charts/Postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./helm_charts/Postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U acn -d authdb"]
       interval: 10s
