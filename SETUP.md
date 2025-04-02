@@ -62,92 +62,55 @@ echo "==== Building and Loading Docker Images ===="
 
 # Auth Service
 echo "Building auth-service..."
-cd src/auth-service
-docker build -t auth-service:latest .
+docker build --no-cache -t auth-service:latest ./src/auth-service
 minikube image load auth-service:latest
-cd ../..
+
 
 # Converter Service
 echo "Building converter-service..."
-cd src/converter-service
-docker build -t converter-service:latest .
+docker build --no-cache -t converter-service:latest ./src/converter-service
 minikube image load converter-service:latest
-cd ../..
 
 # Gateway Service
 echo "Building gateway-service..."
-cd src/gateway-service
-docker build -t gateway-service:latest .
+docker build --no-cache -t gateway-service:latest ./src/gateway-service
 minikube image load gateway-service:latest
-cd ../..
 
 # Notification Service
 echo "Building notification-service..."
-cd src/notification-service
-docker build -t notification-service:latest .
+docker build --no-cache -t notification-service:latest ./src/notification-service
 minikube image load notification-service:latest
-cd ../..
-
-# Update the notification deployment file to use the local image
-sed -i '' 's|image: nasi101/notification|image: notification-service:latest\n          imagePullPolicy: IfNotPresent|g' src/notification-service/manifest/notification-deploy.yaml
 
 # Deploy MongoDB
 echo "==== Deploying MongoDB ===="
-cd helm_charts/MongoDB
-kubectl apply -f templates/storageclass.yaml
-kubectl apply -f templates/configmap.yaml
-kubectl apply -f templates/secret.yaml
-kubectl apply -f templates/pv.yaml
-kubectl apply -f templates/pvc.yaml
-kubectl apply -f templates/service.yaml
-kubectl apply -f templates/statefulset.yaml
-cd ../..
+helm install mongodb ./helm_charts/MongoDB
 
 # Deploy PostgreSQL
 echo "==== Deploying PostgreSQL ===="
-cd helm_charts/Postgres
-kubectl apply -f templates/postgres-service.yaml
-kubectl apply -f templates/postgres-deploy.yaml
-cd ../..
+helm install postgres ./helm_charts/Postgres
 
 # Deploy RabbitMQ
 echo "==== Deploying RabbitMQ ===="
-cd helm_charts/RabbitMQ
-kubectl apply -f templates/storageclasses.yaml
-kubectl apply -f templates/configmap.yaml
-kubectl apply -f templates/secret.yaml
-kubectl apply -f templates/pv.yaml
-kubectl apply -f templates/pvc.yaml
-kubectl apply -f templates/service.yaml
-kubectl apply -f templates/statefulset.yaml
-cd ../..
+helm install rabbitmq ./helm_charts/RabbitMQ
 
 # Deploy microservices
 echo "==== Deploying Microservices ===="
 
 # Deploy Auth Service
 echo "Deploying auth-service..."
-cd src/auth-service
-kubectl apply -f manifest/configmap.yaml -f manifest/secret.yaml -f manifest/service.yaml -f manifest/deployment.yaml
-cd ../..
+kubectl apply -f src/auth-service/manifest/configmap.yaml -f src/auth-service/manifest/secret.yaml -f src/auth-service/manifest/service.yaml -f src/auth-service/manifest/deployment.yaml
 
 # Deploy Converter Service
 echo "Deploying converter-service..."
-cd src/converter-service
-kubectl apply -f manifest/configmap.yaml -f manifest/secret.yaml -f manifest/converter-deploy.yaml
-cd ../..
+kubectl apply -f src/converter-service/manifest/configmap.yaml -f src/converter-service/manifest/secret.yaml -f src/converter-service/manifest/converter-deploy.yaml
 
 # Deploy Gateway Service
 echo "Deploying gateway-service..."
-cd src/gateway-service
-kubectl apply -f manifest/configmap.yaml -f manifest/secret.yaml -f manifest/service.yaml -f manifest/gateway-deploy.yaml
-cd ../..
+kubectl apply -f src/gateway-service/manifest/configmap.yaml -f src/gateway-service/manifest/secret.yaml -f src/gateway-service/manifest/service.yaml -f src/gateway-service/manifest/gateway-deploy.yaml
 
 # Deploy Notification Service
 echo "Deploying notification-service..."
-cd src/notification-service
-kubectl apply -f manifest/configmap.yaml -f manifest/secret.yaml -f manifest/notification-deploy.yaml
-cd ../..
+kubectl apply -f src/notification-service/manifest/configmap.yaml -f src/notification-service/manifest/secret.yaml -f src/notification-service/manifest/notification-deploy.yaml
 
 # Wait for all pods to be ready
 echo "==== Waiting for all pods to be ready ===="
@@ -229,6 +192,13 @@ kubectl describe pod <pod-name>
 3. **Service Connectivity**: If services can't connect to each other, verify the service names and ports in the configmaps.
 
 4. **Persistent Volumes**: If PVs aren't creating properly, check your Minikube version and storage provisioner.
+
+## Note for Mac users.
+if running minikube on exitMac and arm64 architecture, you have to run the following command to update node affinity:
+```bash
+kubectl patch statefulset -n dynatrace localmp3producertest-activegate --type=json
+  -p='[{"op":"replace","path":"/spec/template/spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/0/matchExpressions/0/values","value":["amd64","arm64"]}]'
+```
 
 ## Cleanup
 

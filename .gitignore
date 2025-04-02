@@ -173,3 +173,4 @@ cython_debug/
 .pypirc
 dynakube.yaml
 .idea
+fluent-bit-values.yaml
