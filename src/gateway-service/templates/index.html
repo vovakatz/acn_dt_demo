@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Home - MP4 to MP3 Converter{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 text-center">
+        <h1 class="display-4 mb-4">MP4 to MP3 Converter</h1>
+        <p class="lead">Convert your video files to audio format with our simple microservice.</p>
+        
+        <div class="mt-5">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h3 class="card-title">Upload</h3>
+                            <p class="card-text">Upload your MP4 video files securely.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h3 class="card-title">Convert</h3>
+                            <p class="card-text">Our service automatically converts videos to MP3 format.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h3 class="card-title">Download</h3>
+                            <p class="card-text">Download your converted MP3 files anytime.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <a href="/login" class="btn btn-primary btn-lg">Get Started</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - MP4 to MP3 Converter{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Welcome, <span id="username-display">{{ user.username }}</span></h2>
+        <p>Upload MP4 files to convert them to MP3.</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3>Upload Video</h3>
+            </div>
+            <div class="card-body">
+                <form id="upload-form" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Select MP4 File</label>
+                        <input type="file" class="form-control" id="file" name="file" accept=".mp4" required>
+                    </div>
+                    <div class="progress mb-3 d-none" id="upload-progress">
+                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Upload & Convert</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3>Your MP3 Files</h3>
+                <button id="refresh-files" class="btn btn-sm btn-outline-secondary float-end">Refresh</button>
+            </div>
+            <div class="card-body">
+                <div id="files-list">
+                    <p class="text-center">Loading your files...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Check for authentication
+function checkAuth() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/login';
+        return null;
+    }
+    return token;
+}
+
+// Token handling is now in main.js
+
+// Load user's files
+async function loadFiles() {
+    const token = checkAuth();
+    const filesList = document.getElementById('files-list');
+
+    try {
+        const response = await fetch('/api/files', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+                return;
+            }
+            throw new Error('Failed to load files');
+        }
+
+        const files = await response.json();
+
+        if (files.length === 0) {
+            filesList.innerHTML = '<p class="text-center">No files found. Upload an MP4 to get started.</p>';
+            return;
+        }
+
+        let html = '<div class="list-group">';
+        files.forEach(file => {
+            html += `
+                <div class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">${file.filename || 'Unnamed file'}</h5>
+                        <small>${new Date(file.uploadDate).toLocaleString()}</small>
+                    </div>
+                    <p class="mb-1">Status: ${file.status}</p>
+                    ${file.status === 'completed' ?
+                        `<a href="/download?fid=${file._id}" class="btn btn-sm btn-success"
+                            download="${file.filename || 'audio'}.mp3">Download MP3</a>` :
+                        '<span class="badge bg-warning text-dark">Processing</span>'}
+                </div>
+            `;
+        });
+        html += '</div>';
+        filesList.innerHTML = html;
+    } catch (error) {
+        console.error('Error loading files:', error);
+        filesList.innerHTML = `<p class="text-center text-danger">Error loading files: ${error.message}</p>`;
+    }
+}
+
+// Handle file upload
+document.getElementById('upload-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const token = checkAuth();
+    const fileInput = document.getElementById('file');
+    const progressBar = document.getElementById('upload-progress');
+    const progressBarInner = progressBar.querySelector('.progress-bar');
+
+    if (!fileInput.files.length) {
+        alert('Please select a file to upload');
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+
+    progressBar.classList.remove('d-none');
+    progressBarInner.style.width = '0%';
+
+    try {
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', function(e) {
+            if (e.lengthComputable) {
+                const percentComplete = (e.loaded / e.total) * 100;
+                progressBarInner.style.width = percentComplete + '%';
+                progressBarInner.textContent = Math.round(percentComplete) + '%';
+            }
+        });
+
+        xhr.addEventListener('load', function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                alert('File uploaded successfully!');
+                fileInput.value = '';
+                progressBar.classList.add('d-none');
+                loadFiles();  // Refresh the file list
+            } else {
+                alert('Upload failed: ' + xhr.statusText);
+                progressBar.classList.add('d-none');
+            }
+        });
+
+        xhr.addEventListener('error', function() {
+            alert('Upload failed due to network error');
+            progressBar.classList.add('d-none');
+        });
+
+        xhr.open('POST', '/upload');
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.send(formData);
+    } catch (error) {
+        console.error('Upload error:', error);
+        alert('Upload failed: ' + error.message);
+        progressBar.classList.add('d-none');
+    }
+});
+
+// Refresh files list
+document.getElementById('refresh-files').addEventListener('click', loadFiles);
+
+// Get user info from token
+async function getUserInfo() {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+
+    try {
+        // Decode the JWT token (simple client-side decode)
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        console.error('Error decoding token:', e);
+        return null;
+    }
+}
+
+// Update UI with user info
+async function updateUserInfo() {
+    const userInfo = await getUserInfo();
+    if (userInfo && userInfo.username) {
+        document.getElementById('username-display').textContent = userInfo.username;
+    }
+}
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateUserInfo();
+    loadFiles();
+});
+</script>
+{% endblock %}

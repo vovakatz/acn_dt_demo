@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Login - MP4 to MP3 Converter{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="text-center">Login</h3>
+            </div>
+            <div class="card-body">
+                <form id="login-form" method="post" action="/api/login">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    try {
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+        console.log('Login response:', data);
+
+        if (response.ok) {
+            // Store token in localStorage
+            if (data.token) {
+                localStorage.setItem('token', data.token);
+                console.log('Token stored, redirecting to dashboard');
+                // Small delay to ensure token is stored
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 100);
+            } else {
+                console.error('No token in response:', data);
+                alert('Login successful but no token received. Please try again.');
+            }
+        } else {
+            alert('Login failed: ' + (data.detail || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        alert('Login failed: ' + error.message);
+    }
+});
+</script>
+{% endblock %}
