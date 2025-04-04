@@ -1,6 +1,8 @@
 import os, gridfs, pika, json
 from fastapi import FastAPI, Request, Depends, HTTPException, File, UploadFile, Query, Header, Form
-from fastapi.responses import StreamingResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import StreamingResponse, JSONResponse, PlainTextResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pymongo import MongoClient
 from auth import validate
 from auth_svc import access
@@ -9,12 +11,10 @@ from bson.objectid import ObjectId
 from typing import Optional
 import uvicorn
 import io
+from contextlib import asynccontextmanager
 
 # Import custom logger
 from log.custom_logger import get_custom_logger
-
-# Initialize FastAPI app
-app = FastAPI(title="Gateway Service")
 
 # Set up logger
 logger = get_custom_logger(service_name="gateway-service")
@@ -22,7 +22,7 @@ logger = get_custom_logger(service_name="gateway-service")
 # Log initialization
 logger.info("Initializing gateway service")
 
-# MongoDB and RabbitMQ connections
+# MongoDB and RabbitMQ connections will be managed within the lifespan context
 mongo_video = None
 mongo_mp3 = None
 fs_videos = None
@@ -30,49 +30,59 @@ fs_mp3s = None
 channel = None
 connection = None
 
-@app.on_event("startup")
-async def startup_db_client():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     global mongo_video, mongo_mp3, fs_videos, fs_mp3s, channel, connection
-    
-    # Setup MongoDB connections
+    # Startup logic
     logger.info("Connecting to MongoDB", extra={
         'videos_uri': os.environ.get('MONGODB_VIDEOS_URI'),
         'mp3s_uri': os.environ.get('MONGODB_MP3S_URI')
     })
-    
     try:
-        # Connect to MongoDB
         mongo_video = MongoClient(os.environ.get('MONGODB_VIDEOS_URI'))
         mongo_mp3 = MongoClient(os.environ.get('MONGODB_MP3S_URI'))
         
-        # Setup GridFS
         logger.debug("Initializing GridFS")
         fs_videos = gridfs.GridFS(mongo_video.get_database())
         fs_mp3s = gridfs.GridFS(mongo_mp3.get_database())
         
-        # Setup RabbitMQ connection
         logger.info("Connecting to RabbitMQ", extra={'host': 'rabbitmq'})
         connection = pika.BlockingConnection(pika.ConnectionParameters(host="rabbitmq", heartbeat=0))
         channel = connection.channel()
         
         logger.info("Service initialization completed successfully")
-        
+        yield # The application runs while yielded
     except Exception as e:
         logger.critical(f"Service initialization failed: {str(e)}")
-        raise
+        raise # Raise exception to prevent app startup if init fails
+    finally:
+        # Shutdown logic
+        logger.info("Shutting down service connections")
+        if mongo_video:
+            mongo_video.close()
+            logger.debug("MongoDB video connection closed")
+        if mongo_mp3:
+            mongo_mp3.close()
+            logger.debug("MongoDB mp3 connection closed")
+        if connection and connection.is_open:
+            connection.close()
+            logger.debug("RabbitMQ connection closed")
+        logger.info("Service shutdown completed")
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    global mongo_video, mongo_mp3, connection
-    
-    if mongo_video:
-        mongo_video.close()
-    
-    if mongo_mp3:
-        mongo_mp3.close()
-    
-    if connection:
-        connection.close()
+# Initialize FastAPI app with lifespan manager
+app = FastAPI(title="Gateway Service", lifespan=lifespan)
+
+# Mount static files directory (if it exists)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Configure templates
+templates = Jinja2Templates(directory="templates")
+
+@app.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
+    """Serves the main HTML page."""
+    logger.info("Root path requested, serving index.html")
+    return templates.TemplateResponse("index.html", {"request": request})
 
 @app.post("/login")
 async def login_route(auth_result=Depends(access.login)):

@@ -120,18 +120,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-        
-  # UI Service
-  ui:
-    build:
-      context: ./src/ui-service
-      dockerfile: Dockerfile
-    container_name: ui
-    ports:
-      - "3000:80"
-    depends_on:
-      - gateway
-      - auth
 
 volumes:
   postgres_data:

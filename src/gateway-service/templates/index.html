@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gateway Service UI</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        /* Initially hide content that requires login */
+        #userActions {
+            display: none;
+        }
+        #userInfo { /* Initially hide user info in header */
+             display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="pageHeader">
+        <h1>Welcome to the Gateway Service</h1>
+        <p id="userInfo">Welcome, <span id="loggedInUser"></span>! <button id="logoutButton">Logout</button></p>
+    </div>
+
+    <div id="loginSection">
+        <h2>Login</h2>
+        <form id="loginForm">
+            <label for="username">Username:</label>
+        <input type="email" id="username" name="username" required><br><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required><br><br>
+            <button type="submit">Login</button>
+        </form>
+        <div id="loginResult"></div>
+    </div>
+
+    <div id="userActions">
+        <!-- User info paragraph moved to pageHeader -->
+        <div id="actionsContainer">
+            <div class="action-column" id="uploadColumn">
+                <h2>Upload Video</h2>
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <label for="file">Choose video file:</label>
+                    <input type="file" id="file" name="file" accept="video/*" required><br><br>
+                    <button type="submit">Upload</button>
+                </form>
+                <div id="uploadResult"></div>
+            </div>
+            
+            <div class="action-column" id="downloadColumn">
+                <h2>Download MP3</h2>
+                <form id="downloadForm">
+                    <label for="fid">File ID (MP3):</label>
+        <input type="text" id="fid" name="fid" required><br><br>
+            <button type="submit">Download</button>
+        </form>
+        <div id="downloadResult"></div>
+    </div>
+
+    <!-- Link to static JS if needed later -->
+    <script>
+        const loginSection = document.getElementById('loginSection');
+        const userActionsSection = document.getElementById('userActions');
+        const loginForm = document.getElementById('loginForm');
+        const loginResultDiv = document.getElementById('loginResult');
+        const uploadForm = document.getElementById('uploadForm');
+        const uploadResultDiv = document.getElementById('uploadResult');
+        const downloadForm = document.getElementById('downloadForm');
+        const downloadResultDiv = document.getElementById('downloadResult');
+        const logoutButton = document.getElementById('logoutButton');
+        const loggedInUserSpan = document.getElementById('loggedInUser');
+        const userInfoParagraph = document.getElementById('userInfo'); // Get the new paragraph element
+
+        // Function to update UI based on login state
+        function updateUIForLoginState() {
+            const token = localStorage.getItem('authToken');
+            const username = localStorage.getItem('username'); // Store username on login
+
+            if (token && username) {
+                loginSection.style.display = 'none';
+                userActionsSection.style.display = 'block';
+                userInfoParagraph.style.display = 'block'; // Show user info in header
+                loggedInUserSpan.textContent = username;
+                loginResultDiv.textContent = ''; // Clear login message
+                uploadResultDiv.textContent = ''; // Clear upload message
+                downloadResultDiv.textContent = ''; // Clear download message
+            } else {
+                loginSection.style.display = 'block';
+                userActionsSection.style.display = 'none';
+                userInfoParagraph.style.display = 'none'; // Hide user info in header
+                loggedInUserSpan.textContent = '';
+            }
+        }
+
+        // Login Form Handler
+        loginForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const usernameInput = document.getElementById('username').value; // Get username for storage
+            loginResultDiv.textContent = 'Logging in...';
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (response.ok && data.token) {
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('username', usernameInput); // Store username
+                    updateUIForLoginState(); // Update UI immediately
+                } else {
+                    loginResultDiv.textContent = `Login failed: ${JSON.stringify(data)}`;
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('username');
+                }
+            } catch (error) {
+                loginResultDiv.textContent = `Error: ${error}`;
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('username');
+            }
+        });
+
+        // Logout Button Handler
+        logoutButton.addEventListener('click', () => {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('username');
+            updateUIForLoginState();
+            loginResultDiv.textContent = 'Logged out successfully.'; // Optional message
+        });
+
+
+        // Upload Form Handler (Using direct upload endpoint for now)
+        uploadForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            uploadResultDiv.textContent = 'Uploading...';
+            // Note: The direct /upload endpoint doesn't require auth token
+            // If you switch to an auth-required upload endpoint, add the token header here.
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    uploadResultDiv.textContent = `Upload successful: ${JSON.stringify(data)}`;
+                    // Optionally clear the form or give other feedback
+                    uploadForm.reset();
+                } else {
+                    uploadResultDiv.textContent = `Upload failed: ${JSON.stringify(data)}`;
+                }
+            } catch (error) {
+                uploadResultDiv.textContent = `Error: ${error}`;
+            }
+        });
+
+        // Download Form Handler
+        downloadForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const fid = document.getElementById('fid').value;
+            const token = localStorage.getItem('authToken');
+
+            // No need to check for token here as the form is hidden if not logged in
+            if (!fid) {
+                downloadResultDiv.textContent = 'Please enter a File ID.';
+                return;
+            }
+
+            downloadResultDiv.textContent = 'Attempting download...';
+
+            // Construct the download URL
+            const downloadUrl = `/download?fid=${encodeURIComponent(fid)}`;
+
+            try {
+                // Use fetch to initiate download, requires Authorization header
+                const response = await fetch(downloadUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}` // Token is required for download
+                    }
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    const disposition = response.headers.get('content-disposition');
+                    let filename = `${fid}.mp3`;
+                    if (disposition && disposition.indexOf('attachment') !== -1) {
+                        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                        const matches = filenameRegex.exec(disposition);
+                        if (matches != null && matches[1]) {
+                            filename = matches[1].replace(/['"]/g, '');
+                        }
+                    }
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                    downloadResultDiv.textContent = `Download started for ${filename}.`;
+                    downloadForm.reset(); // Clear the form
+                } else {
+                    try {
+                        const errorData = await response.json();
+                        downloadResultDiv.textContent = `Download failed: ${response.status} - ${JSON.stringify(errorData)}`;
+                    } catch (e) { // Handle cases where response is not JSON
+                         downloadResultDiv.textContent = `Download failed: ${response.status} - ${response.statusText}`;
+                    }
+                }
+            } catch (error) {
+                downloadResultDiv.textContent = `Error: ${error}`;
+            }
+        });
+
+        // Initial UI setup on page load
+        document.addEventListener('DOMContentLoaded', updateUIForLoginState);
+
+    </script>
+</body>
+</html>

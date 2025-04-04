@@ -1,0 +1,135 @@
+body {
+    font-family: sans-serif;
+    line-height: 1.6;
+    margin: 20px;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+#pageHeader {
+    display: flex; /* Enable Flexbox */
+    justify-content: space-between; /* Push items to opposite ends */
+    align-items: center; /* Vertically align items in the center */
+    margin-bottom: 20px; /* Add some space below the header */
+    padding-bottom: 10px; /* Optional: Add padding below header content */
+    border-bottom: 1px solid #eee; /* Optional: Add a separator line */
+}
+
+#pageHeader h1 {
+    margin: 0; /* Remove default margin from h1 */
+}
+
+#pageHeader #userInfo {
+    margin: 0; /* Remove default margin from paragraph */
+}
+
+h1, h2 {
+    color: #0056b3; /* A blue tone */
+}
+
+#loginSection, #userActions {
+    background-color: #fff;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+form {
+    margin-bottom: 15px;
+}
+
+#loginForm {
+    max-width: 400px; /* Limit the maximum width */
+    margin: 0 auto;   /* Center the form horizontally */
+    padding: 20px;    /* Add some padding inside the form */
+    border: 1px solid #eee; /* Optional: add a light border */
+    border-radius: 5px; /* Optional: round the corners */
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+input[type="email"],
+input[type="password"],
+input[type="text"],
+input[type="file"] {
+    width: calc(100% - 22px); /* Adjust width considering padding and border */
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+button {
+    background-color: #007bff; /* Bootstrap primary blue */
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+}
+
+#logoutButton {
+    background-color: #dc3545; /* Bootstrap danger red */
+    margin-left: 10px;
+}
+
+#logoutButton:hover {
+    background-color: #c82333; /* Darker red on hover */
+}
+
+#loginResult, #uploadResult, #downloadResult {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+/* Style for success/error messages (can be added dynamically via JS if needed) */
+.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Removed hr style as hr tags were removed from HTML */
+
+#actionsContainer {
+    display: flex;
+    gap: 20px; /* Add space between columns */
+}
+
+.action-column {
+    flex: 1; /* Allow columns to grow and shrink equally */
+    background-color: #f9f9f9; /* Optional: slight background for columns */
+    padding: 15px;
+    border-radius: 5px;
+    border: 1px solid #eee; /* Optional: light border for columns */
+}
+
+#userActions p {
+    font-size: 1.1em;
+    margin-bottom: 15px;
+}
+
+/* Removed text-align: right; from #userInfo as Flexbox handles positioning */
+
+#loggedInUser {
+    font-weight: bold;
+}
