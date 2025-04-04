@@ -7,27 +7,38 @@ body {
 }
 
 #pageHeader {
-    display: flex; /* Enable Flexbox */
-    justify-content: space-between; /* Push items to opposite ends */
-    align-items: center; /* Vertically align items in the center */
-    margin-bottom: 20px; /* Add some space below the header */
-    padding-bottom: 10px; /* Optional: Add padding below header content */
-    border-bottom: 1px solid #eee; /* Optional: Add a separator line */
+    display: flex;
+    /* Enable Flexbox */
+    justify-content: space-between;
+    /* Push items to opposite ends */
+    align-items: center;
+    /* Vertically align items in the center */
+    margin-bottom: 20px;
+    /* Add some space below the header */
+    padding-bottom: 10px;
+    /* Optional: Add padding below header content */
+    border-bottom: 1px solid #eee;
+    /* Optional: Add a separator line */
 }
 
 #pageHeader h1 {
-    margin: 0; /* Remove default margin from h1 */
+    margin: 0;
+    /* Remove default margin from h1 */
 }
 
 #pageHeader #userInfo {
-    margin: 0; /* Remove default margin from paragraph */
+    margin: 0;
+    /* Remove default margin from paragraph */
 }
 
-h1, h2 {
-    color: #0056b3; /* A blue tone */
+h1,
+h2 {
+    color: #0056b3;
+    /* A blue tone */
 }
 
-#loginSection, #userActions {
+#loginSection,
+#userActions {
     background-color: #fff;
     padding: 20px;
     margin-bottom: 20px;
@@ -40,11 +51,16 @@ form {
 }
 
 #loginForm {
-    max-width: 400px; /* Limit the maximum width */
-    margin: 0 auto;   /* Center the form horizontally */
-    padding: 20px;    /* Add some padding inside the form */
-    border: 1px solid #eee; /* Optional: add a light border */
-    border-radius: 5px; /* Optional: round the corners */
+    max-width: 400px;
+    /* Limit the maximum width */
+    margin: 0 auto;
+    /* Center the form horizontally */
+    padding: 20px;
+    /* Add some padding inside the form */
+    border: 1px solid #eee;
+    /* Optional: add a light border */
+    border-radius: 5px;
+    /* Optional: round the corners */
 }
 
 label {
@@ -57,7 +73,8 @@ input[type="email"],
 input[type="password"],
 input[type="text"],
 input[type="file"] {
-    width: calc(100% - 22px); /* Adjust width considering padding and border */
+    width: calc(100% - 22px);
+    /* Adjust width considering padding and border */
     padding: 10px;
     margin-bottom: 10px;
     border: 1px solid #ccc;
@@ -65,7 +82,8 @@ input[type="file"] {
 }
 
 button {
-    background-color: #007bff; /* Bootstrap primary blue */
+    background-color: #007bff;
+    /* Bootstrap primary blue */
     color: white;
     padding: 10px 15px;
     border: none;
@@ -76,19 +94,24 @@ button {
 }
 
 button:hover {
-    background-color: #0056b3; /* Darker blue on hover */
+    background-color: #0056b3;
+    /* Darker blue on hover */
 }
 
 #logoutButton {
-    background-color: #dc3545; /* Bootstrap danger red */
+    background-color: #dc3545;
+    /* Bootstrap danger red */
     margin-left: 10px;
 }
 
 #logoutButton:hover {
-    background-color: #c82333; /* Darker red on hover */
+    background-color: #c82333;
+    /* Darker red on hover */
 }
 
-#loginResult, #uploadResult, #downloadResult {
+#loginResult,
+#uploadResult,
+#downloadResult {
     margin-top: 10px;
     padding: 10px;
     border-radius: 4px;
@@ -112,15 +135,19 @@ button:hover {
 
 #actionsContainer {
     display: flex;
-    gap: 20px; /* Add space between columns */
+    gap: 20px;
+    /* Add space between columns */
 }
 
 .action-column {
-    flex: 1; /* Allow columns to grow and shrink equally */
-    background-color: #f9f9f9; /* Optional: slight background for columns */
+    flex: 1;
+    /* Allow columns to grow and shrink equally */
+    background-color: #f9f9f9;
+    /* Optional: slight background for columns */
     padding: 15px;
     border-radius: 5px;
-    border: 1px solid #eee; /* Optional: light border for columns */
+    border: 1px solid #eee;
+    /* Optional: light border for columns */
 }
 
 #userActions p {
@@ -132,4 +159,56 @@ button:hover {
 
 #loggedInUser {
     font-weight: bold;
+}
+
+/* Styles for MP3 Download List */
+#mp3FileList {
+    margin-top: 15px;
+}
+
+#mp3FileList p {
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+#mp3FileList ul {
+    list-style: none;
+    /* Remove default bullets */
+    padding: 0;
+    margin: 0;
+    max-height: 200px;
+    /* Limit height and add scroll if needed */
+    overflow-y: auto;
+    /* Add vertical scrollbar if list is long */
+    border: 1px solid #eee;
+    border-radius: 4px;
+}
+
+#mp3FileList li {
+    border-bottom: 1px solid #eee;
+    /* Separator line between items */
+}
+
+#mp3FileList li:last-child {
+    border-bottom: none;
+    /* Remove border from last item */
+}
+
+#mp3FileList .download-link {
+    display: block;
+    /* Make link take full width */
+    padding: 10px 15px;
+    text-decoration: none;
+    color: #007bff;
+    /* Link color */
+    transition: background-color 0.2s ease, color 0.2s ease;
+    font-size: 0.95em;
+}
+
+#mp3FileList .download-link:hover {
+    background-color: #e9ecef;
+    /* Light background on hover */
+    color: #0056b3;
+    /* Darker link color on hover */
+    cursor: pointer;
 }

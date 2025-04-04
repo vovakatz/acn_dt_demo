@@ -80,9 +80,30 @@ templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    """Serves the main HTML page."""
+    """Serves the main HTML page and lists available MP3 files."""
     logger.info("Root path requested, serving index.html")
-    return templates.TemplateResponse("index.html", {"request": request})
+    
+    available_files = []
+    try:
+        # Access the mp3s database and the fs.files collection
+        mp3_db = mongo_mp3.get_database() 
+        # Query for all files in the mp3s GridFS collection
+        # Project only the _id and filename fields
+        cursor = mp3_db.fs.files.find({}, {"_id": 1, "filename": 1}) 
+        for doc in cursor:
+            available_files.append({
+                "id": str(doc["_id"]), # Convert ObjectId to string for template
+                "filename": doc.get("filename", f"mp3_{doc['_id']}") # Use filename or generate one
+            })
+        logger.info(f"Found {len(available_files)} MP3 files to display.")
+    except Exception as e:
+        logger.error(f"Failed to retrieve MP3 file list from MongoDB: {str(e)}")
+        # Continue rendering the page even if DB query fails, but with an empty list
+        
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "mp3_files": available_files # Pass the list to the template
+    })
 
 @app.post("/login")
 async def login_route(auth_result=Depends(access.login)):
