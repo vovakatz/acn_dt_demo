@@ -34,3 +34,4 @@ wrapt==1.14.1
 zipp==3.10.0
 python-json-logger~=3.3.0
 python-multipart==0.0.9
+sse-starlette

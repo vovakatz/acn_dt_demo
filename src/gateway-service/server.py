@@ -3,12 +3,14 @@ from fastapi import FastAPI, Request, Depends, HTTPException, File, UploadFile, 
 from fastapi.responses import StreamingResponse, JSONResponse, PlainTextResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sse_starlette.sse import EventSourceResponse
+import asyncio # Needed for SSE loop
 from pymongo import MongoClient
 from auth import validate
 from auth_svc import access
 from storage import util
 from bson.objectid import ObjectId
-from typing import Optional
+from typing import Optional, Set
 import uvicorn
 import io
 from contextlib import asynccontextmanager
@@ -72,6 +74,77 @@ async def lifespan(app: FastAPI):
 # Initialize FastAPI app with lifespan manager
 app = FastAPI(title="Gateway Service", lifespan=lifespan)
 
+# --- SSE Endpoint for File Updates ---
+async def file_update_generator(request: Request):
+    """
+    Generator function for Server-Sent Events.
+    Periodically checks MongoDB for new MP3 files and sends updates.
+    """
+    known_file_ids: Set[str] = set()
+    initial_check_done = False
+
+    try:
+        while True:
+            # Check if client is still connected before doing work
+            if await request.is_disconnected():
+                logger.info("SSE client disconnected.")
+                break
+
+            current_file_ids = set()
+            new_files_found = []
+            try:
+                mp3_db = mongo_mp3.get_database()
+                cursor = mp3_db.fs.files.find({}, {"_id": 1, "filename": 1})
+                
+                for doc in cursor:
+                    file_id_str = str(doc["_id"])
+                    current_file_ids.add(file_id_str)
+                    
+                    # Only send updates for files not seen before, after the initial check
+                    if initial_check_done and file_id_str not in known_file_ids:
+                        new_files_found.append({
+                            "id": file_id_str,
+                            "filename": doc.get("filename", f"mp3_{file_id_str}")
+                        })
+                
+                # Update known files after processing all current files
+                known_file_ids = current_file_ids
+                initial_check_done = True # Mark initial population complete
+
+                # Send events for newly found files
+                if new_files_found:
+                    for file_data in new_files_found:
+                         logger.info(f"SSE: Sending update for new file: {file_data['filename']} ({file_data['id']})")
+                         # Send data as JSON string
+                         yield json.dumps(file_data) 
+
+            except Exception as e:
+                logger.error(f"SSE: Error checking/sending MP3 file updates: {str(e)}")
+                # Optionally send an error event to the client
+                # yield json.dumps({"error": "Failed to check for updates"})
+                # Continue loop after error, maybe with backoff?
+
+            # Wait before checking again
+            await asyncio.sleep(5) # Check every 5 seconds
+
+    except asyncio.CancelledError:
+        logger.info("SSE connection cancelled.")
+    except Exception as e:
+        logger.error(f"SSE: Unhandled exception in generator: {str(e)}")
+    finally:
+        logger.info("SSE generator finished.")
+
+
+@app.get("/events")
+async def sse_endpoint(request: Request):
+    """Endpoint for clients to subscribe to file update events."""
+    logger.info("SSE client connected.")
+    # Requires user to be logged in? Add Depends(validate.token) if needed.
+    # For simplicity now, allow connection without strict auth check here,
+    # but the download itself is still protected.
+    return EventSourceResponse(file_update_generator(request))
+# --- End SSE Endpoint ---
+
 # Mount static files directory (if it exists)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -86,10 +159,10 @@ async def read_root(request: Request):
     available_files = []
     try:
         # Access the mp3s database and the fs.files collection
-        mp3_db = mongo_mp3.get_database() 
-        # Query for all files in the mp3s GridFS collection
-        # Project only the _id and filename fields
-        cursor = mp3_db.fs.files.find({}, {"_id": 1, "filename": 1}) 
+        mp3_db = mongo_mp3.get_database()
+        # Query for all files in the mp3s GridFS collection, sort by uploadDate descending
+        # Project _id and filename fields
+        cursor = mp3_db.fs.files.find({}, {"_id": 1, "filename": 1}).sort("uploadDate", -1) # Added sort here
         for doc in cursor:
             available_files.append({
                 "id": str(doc["_id"]), # Convert ObjectId to string for template

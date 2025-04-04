@@ -55,9 +55,9 @@
                 <div id="mp3FileList">
                     {% if mp3_files %}
                     <p>Available files:</p>
-                    <ul>
+                    <ul id="mp3-list-ul"> {# Added ID here #}
                         {% for file in mp3_files %}
-                        <li>
+                        <li data-fid="{{ file.id }}"> {# Add data-fid to li for easier checking #}
                             <!-- Add class and data attributes for JS -->
                             <a href="#" class="download-link" data-fid="{{ file.id }}"
                                 data-filename="{{ file.filename }}">
@@ -88,6 +88,9 @@
             const logoutButton = document.getElementById('logoutButton');
             const loggedInUserSpan = document.getElementById('loggedInUser');
             const userInfoParagraph = document.getElementById('userInfo'); // Get the new paragraph element
+            const mp3ListUl = document.getElementById('mp3-list-ul'); // Get the UL element
+
+            let eventSource = null; // Variable to hold the SSE connection
 
             // Function to update UI based on login state
             function updateUIForLoginState() {
@@ -102,7 +105,62 @@
                     loginResultDiv.textContent = ''; // Clear login message
                     uploadResultDiv.textContent = ''; // Clear upload message
                     downloadResultDiv.textContent = ''; // Clear download message
+
+                    // --- Start SSE Connection ---
+                    if (!eventSource || eventSource.readyState === EventSource.CLOSED) {
+                        console.log("Establishing SSE connection to /events");
+                        eventSource = new EventSource('/events');
+
+                        eventSource.onmessage = function (event) {
+                            try {
+                                const fileData = JSON.parse(event.data);
+                                console.log("SSE message received:", fileData);
+
+                                // Check if file already exists in the list
+                                if (mp3ListUl && !mp3ListUl.querySelector(`li[data-fid="${fileData.id}"]`)) {
+                                    console.log(`Adding new file to list: ${fileData.filename}`);
+                                    const listItem = document.createElement('li');
+                                    listItem.setAttribute('data-fid', fileData.id); // Set data-fid on li
+
+                                    const link = document.createElement('a');
+                                    link.href = "#";
+                                    link.classList.add('download-link');
+                                    link.dataset.fid = fileData.id;
+                                    link.dataset.filename = fileData.filename;
+                                    link.textContent = `${fileData.filename} (ID: ${fileData.id})`;
+
+                                    listItem.appendChild(link);
+                                    mp3ListUl.prepend(listItem); // Prepend to the UL to show latest first
+                                } else {
+                                    console.log(`File ${fileData.filename} already in list or list element not found.`);
+                                }
+                            } catch (e) {
+                                console.error("Error processing SSE message:", e, "Data:", event.data);
+                            }
+                        };
+
+                        eventSource.onerror = function (error) {
+                            console.error("SSE Error:", error);
+                            // Optionally close and attempt to reconnect after a delay
+                            if (eventSource) {
+                                eventSource.close();
+                                eventSource = null; // Reset variable
+                                console.log("SSE connection closed due to error.");
+                                // Add reconnection logic here if desired
+                            }
+                        };
+                    }
+                    // --- End SSE Connection ---
+
                 } else {
+                    // --- Close SSE Connection on Logout ---
+                    if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
+                        console.log("Closing SSE connection.");
+                        eventSource.close();
+                        eventSource = null;
+                    }
+                    // --- End Close SSE ---
+
                     loginSection.style.display = 'block';
                     userActionsSection.style.display = 'none';
                     userInfoParagraph.style.display = 'none'; // Hide user info in header
