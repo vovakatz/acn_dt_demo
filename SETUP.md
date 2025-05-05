@@ -194,10 +194,9 @@ kubectl describe pod <pod-name>
 4. **Persistent Volumes**: If PVs aren't creating properly, check your Minikube version and storage provisioner.
 
 ## Note for Mac users.
-if running minikube on exitMac and arm64 architecture, you have to run the following command to update node affinity:
+if running minikube on Mac and arm64 architecture (apple silicone), you have to run the following command to update node affinity:
 ```bash
-kubectl patch statefulset -n dynatrace localmp3producertest-activegate --type=json
-  -p='[{"op":"replace","path":"/spec/template/spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/0/matchExpressions/0/values","value":["amd64","arm64"]}]'
+kubectl patch statefulset -n dynatrace <name-of-the-cluster>-activegate --type=json -p='[{"op":"replace","path":"/spec/template/spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/0/matchExpressions/0/values","value":["amd64","arm64"]}]'
 ```
 
 ## Cleanup

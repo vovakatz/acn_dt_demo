@@ -2,6 +2,84 @@ import logging
 import datetime
 import os
 from pythonjsonlogger import jsonlogger
+import logging.config # Added
+
+# Keep track of configured loggers to avoid re-configuring
+_configured_loggers = set() # Added
+
+# --- Logging Configuration ---
+# Define logging config using dictConfig schema
+# Note: service_name will be populated dynamically in configure_logging
+LOGGING_CONFIG = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "custom_json": {
+            "()": "log.custom_logger.CustomJsonFormatter",
+            "format": "%(timestamp)s %(level)s %(name)s %(message)s",
+            "service_name": None, # Placeholder
+        },
+        "access": {
+            "()": "log.custom_logger.CustomJsonFormatter",
+            "format": "%(timestamp)s %(level)s %(name)s %(message)s",
+            "service_name": None, # Placeholder
+        },
+    },
+    "handlers": {
+        "default": {
+            "formatter": "custom_json",
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stderr",
+        },
+        "access": {
+            "formatter": "access",
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stdout",
+        },
+    },
+    "loggers": {
+        "": { # Root logger
+            "handlers": ["default"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        # Service-specific logger added dynamically
+        "uvicorn": {
+            "handlers": ["default"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "uvicorn.error": {
+            "handlers": ["default"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "uvicorn.access": {
+            "handlers": ["access"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
+
+def configure_logging(service_name="unknown-service"):
+    """Configure logging using dictConfig."""
+    if service_name in _configured_loggers:
+        return # Already configured
+
+    # Dynamically set service_name in formatters and add service logger
+    LOGGING_CONFIG["formatters"]["custom_json"]["service_name"] = service_name
+    LOGGING_CONFIG["formatters"]["access"]["service_name"] = service_name
+    LOGGING_CONFIG["loggers"][service_name] = {
+        "handlers": ["default"],
+        "level": "INFO",
+        "propagate": False,
+    }
+
+    logging.config.dictConfig(LOGGING_CONFIG)
+    _configured_loggers.add(service_name)
+    # Optional: Log that configuration happened
+    # logging.getLogger(service_name).debug(f"Logging configured for service: {service_name}")
 
 
 def get_custom_logger(service_name=None):
@@ -20,22 +98,12 @@ def get_custom_logger(service_name=None):
     if service_name is None:
         service_name = os.environ.get("MICROSERVICE_NAME", "unknown-service")
     
-    # Create logger
-    logger = logging.getLogger(service_name)
-    
-    # Only add handlers if the logger doesn't already have any
-    if not logger.handlers:
-        logger.setLevel(logging.INFO)
-        
-        # Create handler
-        handler = logging.StreamHandler()
-        
-        # Create formatter
-        formatter = CustomJsonFormatter('%(timestamp)s %(level)s %(name)s %(message)s', service_name=service_name)
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-    
-    return logger
+    # Configure logging for this service if not already done
+    # This will set up handlers and formatters via dictConfig
+    configure_logging(service_name)
+
+    # Return the logger instance (already configured by dictConfig)
+    return logging.getLogger(service_name)
 
 
 # Create formatter

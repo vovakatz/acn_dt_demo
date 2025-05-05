@@ -19,6 +19,7 @@ from contextlib import asynccontextmanager
 from log.custom_logger import get_custom_logger
 
 # Set up logger
+# The get_custom_logger function now handles the configuration internally
 logger = get_custom_logger(service_name="gateway-service")
 
 # Log initialization
@@ -311,12 +312,15 @@ async def download_route(fid: str = Query(...), auth_result=Depends(validate.tok
         raise HTTPException(status_code=500, detail="internal server error")
 
 if __name__ == "__main__":
+    # Uvicorn will use the logging configuration applied by get_custom_logger
     logger.info("Starting gateway service", extra={
         'host': '0.0.0.0',
         'port': 8080
     })
-    
+
     try:
+        # Run Uvicorn with the app object directly.
+        # Uvicorn automatically picks up the configured root logger settings.
         uvicorn.run(app, host="0.0.0.0", port=8080)
     except Exception as e:
         logger.critical(f"Server crashed: {str(e)}")

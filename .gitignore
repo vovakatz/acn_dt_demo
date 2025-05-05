@@ -174,3 +174,6 @@ cython_debug/
 dynakube.yaml
 .idea
 fluent-bit-values.yaml
+
+**/.claude/settings.local.json
+dynakube_kind.yaml
