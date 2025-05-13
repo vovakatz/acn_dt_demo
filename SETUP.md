@@ -135,6 +135,11 @@ echo ""
 echo "To start tunnel, run in a separate terminal: minikube tunnel"
 ```
 
+## Setup logging
+The recommended way to setup loging and tracing with Dynatrace is to use OneAgent.  However, I was not able to 
+do this due to various errors with Dynatrace pods and instead opted for shipping logs with Fluent Bit.  Foloow the 
+instructions [here](https://docs.dynatrace.com/docs/analyze-explore-automate/log-monitoring/acquire-log-data/lm-fluent-bit-logs-k8s) to set logging up. 
+
 ## Setting Up the Application
 
 1. Make the script executable and run it:
@@ -147,9 +152,9 @@ echo "To start tunnel, run in a separate terminal: minikube tunnel"
 
    a. Use port forwarding (in a separate terminal):
    ```bash
-   kubectl port-forward service/gateway 8081:8080
+   kubectl port-forward service/gateway 8080:8080
    ```
-   Then access the application at: http://localhost:8081
+   Then access the application at: http://localhost:8080
    
    b. Use Minikube tunnel (in a separate terminal):
    ```bash

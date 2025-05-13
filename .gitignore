@@ -177,3 +177,4 @@ fluent-bit-values.yaml
 
 **/.claude/settings.local.json
 dynakube_kind.yaml
+fluentbit_values.yaml
