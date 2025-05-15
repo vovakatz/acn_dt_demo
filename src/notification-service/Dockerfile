@@ -4,11 +4,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends --no-install-su
     && pip install --no-cache-dir --upgrade pip
 
 WORKDIR /app
-COPY ./requirements.txt /app
+RUN mkdir -p /app/src/notification-service /app/src/common
 
-RUN pip install --no-cache-dir --requirement /app/requirements.txt
+COPY notification-service/requirements.txt /app/src/notification-service/
 
-# Copy notification service files
-COPY . /app
+RUN pip install --no-cache-dir --requirement /app/src/notification-service/requirements.txt
+
+COPY common /app/src/common
+COPY notification-service/. /app/src/notification-service
+
+ENV PYTHONPATH=/app
+
+WORKDIR /app/src/notification-service
 
 CMD ["python", "consumer.py"]

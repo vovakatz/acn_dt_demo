@@ -16,7 +16,7 @@ import io
 from contextlib import asynccontextmanager
 
 # Import custom logger
-from log.custom_logger import get_custom_logger
+from src.common.log.custom_logger import get_custom_logger
 
 # Set up logger
 # The get_custom_logger function now handles the configuration internally

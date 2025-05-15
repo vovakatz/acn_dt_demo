@@ -1,6 +1,6 @@
 import pika, sys, os
 from send import email
-from log.custom_logger import get_custom_logger
+from src.common.log.custom_logger import get_custom_logger
 
 def main(logger):
     # rabbitmq connection

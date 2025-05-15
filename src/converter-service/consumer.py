@@ -4,7 +4,7 @@ import gridfs
 from convert import to_mp3
 
 # Import custom logger
-from log.custom_logger import get_custom_logger
+from src.common.log.custom_logger import get_custom_logger
 
 # Initialize logger
 logger = get_custom_logger(service_name="converter-service")
